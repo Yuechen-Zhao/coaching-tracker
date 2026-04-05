@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coaching Follow-up Tracker</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      line-height: 1.6;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      background: white;
+      min-height: 100vh;
+    }
+    
+    .header {
+      margin-bottom: 1.5rem;
+      border-bottom: 0.5px solid #e0e0e0;
+      padding-bottom: 1rem;
+    }
+    
+    h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    
+    .subtitle {
+      font-size: 13px;
+      color: #666;
+    }
+    
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 12px;
+      margin-bottom: 1.5rem;
+    }
+    
+    .summary-card {
+      background: #f9f9f9;
+      border-radius: 8px;
+      padding: 0.75rem;
+      text-align: center;
+      border: 0.5px solid #e0e0e0;
+    }
+    
+    .summary-label {
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .summary-value {
+      font-size: 20px;
+      font-weight: 600;
+      color: #333;
+    }
+    
+    .controls {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .filter-btn {
+      padding: 6px 11px;
+      border: 0.5px solid #ddd;
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+      font-size: 12px;
+      transition: all 0.2s;
+    }
+    
+    .filter-btn.active {
+      border-color: #333;
+      background: #f0f0f0;
+      font-weight: 500;
+    }
+    
+    .filter-btn:hover {
+      border-color: #999;
+    }
+    
+    .appointments-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .appointment-item {
+      border: 0.5px solid #e0e0e0;
+      border-radius: 8px;
+      background: white;
+      overflow: hidden;
+    }
+    
+    .appointment-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    
+    .appointment-header:hover {
+      background: #f9f9f9;
+    }
+    
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    
+    .status-pending { background: #e24b4a; }
+    .status-partial { background: #ba7517; }
+    .status-complete { background: #3b6d11; }
+    
+    .appointment-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .client-name {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    
+    .appointment-meta {
+      display: flex;
+      gap: 10px;
+      font-size: 12px;
+      color: #666;
+      flex-wrap: wrap;
+    }
+    
+    .platform-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    
+    .platform-exponent { background: rgba(83, 74, 183, 0.1); color: #534AB7; }
+    .platform-mentorcruise { background: rgba(15, 110, 86, 0.1); color: #0F6E56; }
+    .platform-interviewing { background: rgba(24, 95, 165, 0.1); color: #185FA5; }
+    .platform-igotanoffer { background: rgba(133, 79, 11, 0.1); color: #854F0B; }
+    .platform-other { background: rgba(95, 94, 90, 0.1); color: #5F5E5A; }
+    
+    .quick-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      color: #666;
+      cursor: pointer;
+      padding: 4px 6px;
+      border-radius: 4px;
+      transition: background 0.2s;
+    }
+    
+    .checkbox-label:hover {
+      background: #f0f0f0;
+    }
+    
+    .checkbox-label input {
+      cursor: pointer;
+    }
+    
+    .expand-icon {
+      font-size: 12px;
+      color: #999;
+      transition: transform 0.2s;
+    }
+    
+    .appointment-item.expanded .expand-icon {
+      transform: rotate(180deg);
+    }
+    
+    .appointment-details {
+      border-top: 0.5px solid #e0e0e0;
+      padding: 12px;
+      background: #f9f9f9;
+      display: none;
+    }
+    
+    .appointment-item.expanded .appointment-details {
+      display: block;
+    }
+    
+    .details-section {
+      margin-bottom: 12px;
+    }
+    
+    .details-section:last-child {
+      margin-bottom: 0;
+    }
+    
+    .section-label {
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      display: block;
+    }
+    
+    .notes-textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 8px;
+      font-family: inherit;
+      font-size: 13px;
+      border: 0.5px solid #ddd;
+      border-radius: 6px;
+      background: white;
+      color: #333;
+      resize: vertical;
+    }
+    
+    .notes-textarea::placeholder {
+      color: #999;
+    }
+    
+    .checkbox-row {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 2rem 1rem;
+      color: #999;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Coaching Follow-up Tracker</h1>
+      <p class="subtitle">Manage your coaching and mentoring appointments</p>
+    </div>
+
+    <div class="summary">
+      <div class="summary-card">
+        <div class="summary-label">Total</div>
+        <div class="summary-value" id="total">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Pending</div>
+        <div class="summary-value" id="pending">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Email sent</div>
+        <div class="summary-value" id="emailed">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">Complete</div>
+        <div class="summary-value" id="complete">0</div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button class="filter-btn active" onclick="filterPlatform('all')">All</button>
+      <button class="filter-btn" onclick="filterPlatform('exponent')">Exponent</button>
+      <button class="filter-btn" onclick="filterPlatform('mentorcruise')">MentorCruise</button>
+      <button class="filter-btn" onclick="filterPlatform('interviewing')">Interviewing</button>
+      <button class="filter-btn" onclick="filterPlatform('igotanoffer')">IGotAnOffer</button>
+    </div>
+
+    <div class="appointments-list" id="appointmentsList">
+      <div class="empty-state">Loading appointments...</div>
+    </div>
+  </div>
+
+  <script>
+    let appointments = [];
+    let currentFilter = 'all';
+
+    function detectPlatform(title) {
+      const lower = title.toLowerCase();
+      if (lower.includes('igotanoffer') || lower.includes('igotan')) return 'igotanoffer';
+      if (lower.includes('exponent')) return 'exponent';
+      if (lower.includes('mentorcruise') || lower.includes('mentor cruise')) return 'mentorcruise';
+      if (lower.includes('interviewing')) return 'interviewing';
+      return 'other';
+    }
+
+    function extractClientName(title) {
+      let match = title.match(/Mentorship\s*-\s*([A-Za-z\s]+)\s*\(/i);
+      if (match) {
+        let name = match[1].trim();
+        if (!name.toLowerCase().includes('ingrid')) return name;
+      }
+      
+      let clean = title
+        .replace(/igotanoffer/gi, '')
+        .replace(/igotan/gi, '')
+        .replace(/exponent/gi, '')
+        .replace(/mentorship/gi, '')
+        .replace(/mentorcruise/gi, '')
+        .replace(/mentor cruise/gi, '')
+        .replace(/interviewing\.io/gi, '')
+        .replace(/interviewing\s+io/gi, '')
+        .replace(/coaching\s+session/gi, '')
+        .replace(/practice\s+interview/gi, '')
+        .replace(/ingrid\s+zhao/gi, '')
+        .replace(/ingrid/gi, '')
+        .trim();
+      
+      clean = clean.replace(/\([^)]*\)/g, '').trim();
+      clean = clean.replace(/[#\/\-]/g, ' ').trim();
+      clean = clean.replace(/\s+/g, ' ').trim();
+      clean = clean.replace(/^(?:and|with|between|or)\s+/i, '').trim();
+      
+      let m = clean.match(/\band\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)\b/i);
+      if (m) {
+        let name = m[1].trim();
+        if (!name.toLowerCase().includes('ingrid') && name.length > 1) return name;
+      }
+      
+      m = clean.match(/(?:with|between)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)/i);
+      if (m) {
+        let name = m[1].trim();
+        if (!name.toLowerCase().includes('ingrid') && name.length > 1) return name;
+      }
+      
+      m = clean.match(/[:\-]\s*([A-Za-z]+(?:\s+[A-Za-z]+)?)/);
+      if (m) {
+        let name = m[1].trim();
+        if (!name.toLowerCase().includes('ingrid') && name.length > 1) return name;
+      }
+      
+      m = clean.match(/^([A-Za-z]+(?:\s+[A-Za-z]+)?)/);
+      if (m) {
+        let name = m[1].trim();
+        if (!name.toLowerCase().includes('ingrid') && name.length > 1) return name;
+      }
+      
+      return 'Client';
+    }
+
+    function getStatus(appt) {
+      if (appt.preferencesAsked) return 'complete';
+      if (appt.emailSent) return 'partial';
+      return 'pending';
+    }
+
+    function toggleExpand(id) {
+      const item = document.getElementById(`item-${id}`);
+      item.classList.toggle('expanded');
+    }
+
+    function toggleEmail(id) {
+      const appt = appointments.find(a => a.id === id);
+      if (appt) {
+        appt.emailSent = !appt.emailSent;
+        saveState();
+      }
+    }
+
+    function togglePreferences(id) {
+      const appt = appointments.find(a => a.id === id);
+      if (appt) {
+        appt.preferencesAsked = !appt.preferencesAsked;
+        if (appt.preferencesAsked && !appt.emailSent) {
+          appt.emailSent = true;
+        }
+        saveState();
+      }
+    }
+
+    function updateNotes(id, notes) {
+      const appt = appointments.find(a => a.id === id);
+      if (appt) {
+        appt.notes = notes;
+        saveState();
+      }
+    }
+
+    function saveState() {
+      const appointmentsObj = {};
+      appointments.forEach(appt => {
+        appointmentsObj[appt.id] = {
+          emailSent: appt.emailSent,
+          preferencesAsked: appt.preferencesAsked,
+          notes: appt.notes
+        };
+      });
+      localStorage.setItem('coachingAppointments', JSON.stringify(appointmentsObj));
+      renderAppointments();
+    }
+
+    function filterPlatform(platform) {
+      currentFilter = platform;
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+      renderAppointments();
+    }
+
+    function renderAppointments() {
+      const filtered = currentFilter === 'all'
+        ? appointments
+        : appointments.filter(a => a.platform === currentFilter);
+
+      const sorted = filtered.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      const list = document.getElementById('appointmentsList');
+
+      if (sorted.length === 0) {
+        list.innerHTML = '<div class="empty-state">No appointments found</div>';
+        updateSummary();
+        return;
+      }
+
+      list.innerHTML = sorted.map(appt => {
+        const date = new Date(appt.date);
+        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        const status = getStatus(appt);
+
+        const platformLabels = {
+          'exponent': 'Exponent',
+          'mentorcruise': 'MentorCruise',
+          'interviewing': 'Interviewing.io',
+          'igotanoffer': 'IGotAnOffer',
+          'other': 'Coaching'
+        };
+
+        return `
+          <div class="appointment-item" id="item-${appt.id}">
+            <div class="appointment-header" onclick="toggleExpand('${appt.id}')">
+              <div class="status-dot status-${status}"></div>
+              <div class="appointment-info">
+                <div class="client-name">${appt.clientName}</div>
+                <div class="appointment-meta">
+                  <span>${dateStr} at ${timeStr}</span>
+                  <span class="platform-badge platform-${appt.platform}">${platformLabels[appt.platform]}</span>
+                </div>
+              </div>
+              <div class="quick-actions">
+                <label class="checkbox-label" onclick="event.stopPropagation()">
+                  <input type="checkbox" ${appt.emailSent ? 'checked' : ''} onchange="toggleEmail('${appt.id}')">
+                  Email
+                </label>
+                <label class="checkbox-label" onclick="event.stopPropagation()">
+                  <input type="checkbox" ${appt.preferencesAsked ? 'checked' : ''} onchange="togglePreferences('${appt.id}')">
+                  Prefs
+                </label>
+                <span class="expand-icon">▼</span>
+              </div>
+            </div>
+            <div class="appointment-details">
+              <div class="details-section">
+                <label class="section-label">Notes & preferences</label>
+                <textarea class="notes-textarea" placeholder="Record client preferences, topics to focus on, or follow-up reminders..." onblur="updateNotes('${appt.id}', this.value)">${appt.notes || ''}</textarea>
+              </div>
+              <div class="details-section">
+                <div class="checkbox-row">
+                  <label class="checkbox-label">
+                    <input type="checkbox" ${appt.emailSent ? 'checked' : ''} onchange="toggleEmail('${appt.id}')">
+                    Welcome email sent
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" ${appt.preferencesAsked ? 'checked' : ''} onchange="togglePreferences('${appt.id}')">
+                    Preferences collected
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      updateSummary();
+    }
+
+    function updateSummary() {
+      const total = appointments.length;
+      const pending = appointments.filter(a => !a.emailSent).length;
+      const emailed = appointments.filter(a => a.emailSent && !a.preferencesAsked).length;
+      const completeCount = appointments.filter(a => a.preferencesAsked).length;
+
+      document.getElementById('total').textContent = total;
+      document.getElementById('pending').textContent = pending;
+      document.getElementById('emailed').textContent = emailed;
+      document.getElementById('complete').textContent = completeCount;
+    }
+
+    async function loadFromGoogleCalendar() {
+      const webAppUrl = 'https://script.google.com/macros/s/AKfycbxeOYY3h4kofxZmCmEDvmEf8JWWkdyxdfo24jDtazulOj19O-jIGEYLTcXcT5SyCTcSNA/exec';
+      
+      if (webAppUrl === 'REPLACE_WITH_YOUR_WEB_APP_URL') {
+        loadSampleData();
+        return;
+      }
+
+      try {
+        const response = await fetch(webAppUrl);
+        const events = await response.json();
+        
+        const savedStr = localStorage.getItem('coachingAppointments');
+        const saved = savedStr ? JSON.parse(savedStr) : {};
+        
+        appointments = events.map(evt => {
+          const existing = saved[evt.id] || {};
+          let notes = existing.notes || '';
+          
+          // 如果没有notes但有focusArea，自动填充
+          if (!notes && evt.focusArea) {
+            notes = `Focus: ${evt.focusArea}`;
+          }
+          
+          return {
+            id: evt.id,
+            clientName: extractClientName(evt.title),
+            date: evt.startTime,
+            platform: evt.platform || detectPlatform(evt.title),
+            emailSent: existing.emailSent || false,
+            preferencesAsked: existing.preferencesAsked || false,
+            notes: notes,
+            focusArea: evt.focusArea || ''
+          };
+        });
+
+        if (appointments.length > 0) {
+          renderAppointments();
+        } else {
+          loadSampleData();
+        }
+      } catch (error) {
+        console.error('Error fetching from Google Calendar:', error);
+        loadSampleData();
+      }
+    }
+
+    function loadSampleData() {
+      const now = new Date();
+      const sampleAppointments = [
+        { 
+          id: 'exp_001', 
+          clientName: 'Jerry Chen', 
+          date: new Date(now.getTime() + 2*24*3600*1000).toISOString(), 
+          platform: 'exponent', 
+          emailSent: false, 
+          preferencesAsked: false,
+          notes: ''
+        },
+        { 
+          id: 'mc_001', 
+          clientName: 'Ikhlak Shaikh', 
+          date: new Date(now.getTime() + 1*24*3600*1000).toISOString(), 
+          platform: 'mentorcruise', 
+          emailSent: true, 
+          preferencesAsked: false,
+          notes: 'Targeting Apple backend role, interested in system design'
+        },
+        { 
+          id: 'iio_001', 
+          clientName: 'Sarah Kim', 
+          date: new Date(now.getTime() + 3*24*3600*1000).toISOString(), 
+          platform: 'interviewing', 
+          emailSent: true, 
+          preferencesAsked: true,
+          notes: 'Prefers morning sessions, focus on behavioral'
+        },
+        { 
+          id: 'igo_001', 
+          clientName: 'Alex Rodriguez', 
+          date: new Date(now.getTime() + 4*24*3600*1000).toISOString(), 
+          platform: 'igotanoffer', 
+          emailSent: false, 
+          preferencesAsked: false,
+          notes: ''
+        }
+      ];
+
+      appointments = sampleAppointments;
+      renderAppointments();
+    }
+
+    loadFromGoogleCalendar();
+  </script>
+</body>
+</html>
