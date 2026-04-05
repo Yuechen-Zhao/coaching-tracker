@@ -100,6 +100,16 @@
       border-color: #999;
     }
     
+    .sync-status {
+      font-size: 12px;
+      color: #999;
+      margin-left: auto;
+    }
+    
+    .sync-status.synced {
+      color: #3b6d11;
+    }
+    
     .appointments-list {
       display: flex;
       flex-direction: column;
@@ -295,6 +305,7 @@
       <button class="filter-btn" onclick="filterPlatform('mentorcruise')">MentorCruise</button>
       <button class="filter-btn" onclick="filterPlatform('interviewing')">Interviewing</button>
       <button class="filter-btn" onclick="filterPlatform('igotanoffer')">IGotAnOffer</button>
+      <div class="sync-status" id="syncStatus">Loading...</div>
     </div>
 
     <div class="appointments-list" id="appointmentsList">
@@ -305,11 +316,13 @@
   <script>
     let appointments = [];
     let currentFilter = 'all';
+    const SHEET_API_URL = 'https://script.google.com/macros/s/AKfycbyDNHFKfptpn5OB6Z8UZCSZQY-G_33Ip-_20XQvfCI2p8wXjkf_AFZSz3kcpQE6p6shjQ/exec';
+    const CALENDAR_API_URL = 'https://script.google.com/macros/s/AKfycbwXZMLt13BTiuVH3Fvu9k-KRSZKJY8mx3_z5kvzadlyPX8hYDMagER2xkBrjaQOsgAvsA/exec';
 
     function detectPlatform(title) {
       const lower = title.toLowerCase();
       if (lower.includes('igotanoffer') || lower.includes('igotan')) return 'igotanoffer';
-      if (lower.includes('exponent')) return 'exponent';
+      if (lower.includes('calendly') || lower.includes('exponent')) return 'exponent';
       if (lower.includes('mentorcruise') || lower.includes('mentor cruise')) return 'mentorcruise';
       if (lower.includes('interviewing')) return 'interviewing';
       return 'other';
@@ -407,7 +420,7 @@
       }
     }
 
-    function saveState() {
+    async function saveState() {
       const appointmentsObj = {};
       appointments.forEach(appt => {
         appointmentsObj[appt.id] = {
@@ -417,6 +430,25 @@
         };
       });
       localStorage.setItem('coachingAppointments', JSON.stringify(appointmentsObj));
+      
+      // 同时写到Google Sheet
+      for (const appt of appointments) {
+        try {
+          await fetch(SHEET_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              id: appt.id,
+              emailSent: appt.emailSent,
+              preferencesAsked: appt.preferencesAsked,
+              notes: appt.notes
+            })
+          });
+        } catch (error) {
+          console.error('Error saving to Sheet:', error);
+        }
+      }
+      
+      updateSyncStatus();
       renderAppointments();
     }
 
@@ -516,26 +548,38 @@
       document.getElementById('complete').textContent = completeCount;
     }
 
-    async function loadFromGoogleCalendar() {
-      const webAppUrl = 'https://script.google.com/macros/s/AKfycbxeOYY3h4kofxZmCmEDvmEf8JWWkdyxdfo24jDtazulOj19O-jIGEYLTcXcT5SyCTcSNA/exec';
-      
-      if (webAppUrl === 'REPLACE_WITH_YOUR_WEB_APP_URL') {
-        loadSampleData();
-        return;
-      }
+    function updateSyncStatus() {
+      const status = document.getElementById('syncStatus');
+      status.textContent = '✓ Synced';
+      status.classList.add('synced');
+      setTimeout(() => {
+        status.textContent = 'All devices synced';
+        status.classList.remove('synced');
+      }, 2000);
+    }
 
+    async function loadFromSheet() {
       try {
-        const response = await fetch(webAppUrl);
+        const response = await fetch(SHEET_API_URL);
+        const sheetData = await response.json();
+        return sheetData;
+      } catch (error) {
+        console.error('Error loading from Sheet:', error);
+        return {};
+      }
+    }
+
+    async function loadFromGoogleCalendar() {
+      try {
+        const response = await fetch(CALENDAR_API_URL);
         const events = await response.json();
         
-        const savedStr = localStorage.getItem('coachingAppointments');
-        const saved = savedStr ? JSON.parse(savedStr) : {};
+        const sheetData = await loadFromSheet();
         
         appointments = events.map(evt => {
-          const existing = saved[evt.id] || {};
+          const existing = sheetData[evt.id] || {};
           let notes = existing.notes || '';
           
-          // 如果没有notes但有focusArea，自动填充
           if (!notes && evt.focusArea) {
             notes = `Focus: ${evt.focusArea}`;
           }
@@ -554,6 +598,7 @@
 
         if (appointments.length > 0) {
           renderAppointments();
+          updateSyncStatus();
         } else {
           loadSampleData();
         }
@@ -582,25 +627,7 @@
           platform: 'mentorcruise', 
           emailSent: true, 
           preferencesAsked: false,
-          notes: 'Targeting Apple backend role, interested in system design'
-        },
-        { 
-          id: 'iio_001', 
-          clientName: 'Sarah Kim', 
-          date: new Date(now.getTime() + 3*24*3600*1000).toISOString(), 
-          platform: 'interviewing', 
-          emailSent: true, 
-          preferencesAsked: true,
-          notes: 'Prefers morning sessions, focus on behavioral'
-        },
-        { 
-          id: 'igo_001', 
-          clientName: 'Alex Rodriguez', 
-          date: new Date(now.getTime() + 4*24*3600*1000).toISOString(), 
-          platform: 'igotanoffer', 
-          emailSent: false, 
-          preferencesAsked: false,
-          notes: ''
+          notes: 'Targeting Apple backend role'
         }
       ];
 
